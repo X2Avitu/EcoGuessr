@@ -168,12 +168,13 @@ export async function createParty(data: {
         id: uuidv4(),
         name: data.name,
         description: data.description,
-        lat: data.lat,
-        lng: data.lng,
-        attendees: 1, // Creator is the first attendee
         color: randomColor,
         createdAt: new Date().toISOString(),
+        lat: data.lat,
+        lng: data.lng,
         user: user.id, // Set to current user's ID
+        number_attendees: 1, // Creator is the first attendee
+        attendees: [user.id], // Add creator to the list of attendees
       }
     ])
     .select();
@@ -249,3 +250,55 @@ export const getGoogleAccountInfo = async () => {
     profile_image: googleIdentity.identity_data?.avatar_url,
   };
 };
+
+export async function getProfileById(id: string): Promise<any> {
+  const supabase = await createClient();
+  const { data: profile, error } = await supabase
+    .from('profile')
+    .select("*")
+    .eq("id", id) // Only select the row where id matches current user
+    .single();
+
+  if (error) {
+    console.error("Error fetching profile:", error);
+    return null;
+  }
+  console.log("Profile data:", profile);
+  return profile;
+}
+
+export async function getAttendeesList(partyId: string): Promise<any> {
+  const supabase = await createClient();
+  const { data: party, error } = await supabase
+    .from('Public')
+    .select("attendees")
+    .eq("id", partyId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching attendees list:", error);
+    return null;
+  }
+  console.log("Attendees list:", party.attendees);
+  return party.attendees;
+
+}
+  
+export async function getJoinedParties(){
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: parties, error } = await supabase
+    .from('Public')
+    .select("*")
+    .contains("attendees", [user.id]) // Only select the rows where user matches current user
+
+  if (error) {
+    console.error("Error fetching parties:", error);
+    return null;
+  }
+  console.log("Parties created by user:", parties);
+  return parties;
+}

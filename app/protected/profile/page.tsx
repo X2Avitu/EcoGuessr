@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Edit, Trash2, Plus, ArrowRight, XCircle } from "lucide-react"
 import Link from "next/link"
-import { getGoogleAccountInfo, getPartiesCreatedByUser, getProfile } from "@/app/actions"
+import { getAttendeesList, getGoogleAccountInfo, getJoinedParties, getPartiesCreatedByUser, getProfile, getProfileById } from "@/app/actions"
 
 // Types
 interface Location {
@@ -56,12 +56,21 @@ const mockUser: User = {
   createdParties: [],
   joinedParties: [],
 }
+
 function DashboardContent() {
   const [user, setUser] = useState<User>(mockUser)
   const [parties, setParties] = useState<Party[]>([])
   const [selectedParty, setSelectedParty] = useState<Party | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [googleProfileImage, setGoogleProfileImage] = useState<string | null>(null)
+  const [googleName, setGoogleName] = useState<string | null>(null)
+  const [partyAttendeeAvatars, setPartyAttendeeAvatars] = useState<Record<string, { id: string; avatar: string; name: string }[]>>({});
+  const [joinedPartiesData, setJoinedPartiesData] = useState<any[]>([]);
+
+  useEffect(() => {
+    console.log(getJoinedParties())
+  }
+, [])
 
   useEffect(() => {
     getProfile().then(profile => {
@@ -77,12 +86,19 @@ function DashboardContent() {
       }
     });
     getGoogleAccountInfo().then(info => {
-      if (info && info.profile_image) {
-        setGoogleProfileImage(info.profile_image);
+      if (info) {
+        if (info.profile_image) setGoogleProfileImage(info.profile_image);
+        if (info.full_identity?.identity_data?.full_name) setGoogleName(info.full_identity.identity_data.full_name);
       }
     });
   }, []);
-
+  useEffect(() => {
+    getJoinedParties().then(data => {
+      if (Array.isArray(data)) {
+        setJoinedPartiesData(data);
+      }
+    }).catch(err => console.error("Error fetching joined parties:", err));
+  }, []);
   useEffect(() => {
     getPartiesCreatedByUser().then(data => {
       if (Array.isArray(data)) {
@@ -105,7 +121,35 @@ function DashboardContent() {
       }
     })
   }, [user.name])
-  // Use parties directly for created parties
+
+  useEffect(() => {
+    // For each party, fetch its attendees
+    parties.forEach(party => {
+      getAttendeesList(party.id).then(async (attendees: string[]) => {
+        const profiles = await Promise.all(
+          attendees.map(async (id) => {
+            try {
+              const profile = await getProfileById(id);
+              return {
+                id,
+                avatar: profile?.public_profile_image || "/placeholder.svg",
+                name: profile?.display_name || "User",
+              };
+            } catch (error) {
+              console.error("Error fetching profile:", error);
+              return { id, avatar: "/placeholder.svg", name: "User" };
+            }
+          })
+        );
+        
+        setPartyAttendeeAvatars(prev => ({
+          ...prev,
+          [party.id]: profiles
+        }));
+      }).catch(err => console.error("Error fetching attendees:", err));
+    });
+  }, [parties]);
+
   const createdParties = parties
   const joinedParties = parties.filter(
     (party) => user.joinedParties?.includes(party.id) && !user.createdParties?.includes(party.id),
@@ -129,17 +173,19 @@ function DashboardContent() {
     }
   }
 
+  // Prefer Google name if user.name is "No Name"
+  const displayName = (user.name === "No Name" && googleName) ? googleName : user.name
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={googleProfileImage || user.avatar || "/placeholder.svg"} alt={user.name} />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={googleProfileImage || user.avatar || "/placeholder.svg"} alt={displayName} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold">{user.name}'s Dashboard</h1>
+            <h1 className="text-2xl font-bold">{displayName}'s Dashboard</h1>
             <p className="text-muted-foreground">{user.email}</p>
           </div>
         </div>
@@ -150,6 +196,7 @@ function DashboardContent() {
           </Button>
         </Link>
       </div>
+      
       <Tabs defaultValue="created" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="created">My Parties ({createdParties.length})</TabsTrigger>
@@ -186,23 +233,28 @@ function DashboardContent() {
                     <Calendar className="h-4 w-4" />
                     <span>{new Date(party.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <Users className="h-4 w-4" />
-                    <span>{party.attendees} attendees</span>
-                  </div>
+                  
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      {/* <span>{party.attendees || 0} attendees</span> */}
+                      <span>{0}</span>
 
-                  <div className="flex -space-x-2 mb-4">
-                    {party.attendeeList?.slice(0, 5).map((attendee, i) => (
-                      <Avatar key={attendee.id} className="border-2 border-background">
-                        <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name} />
-                        <AvatarFallback>{attendee.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {party.attendees > 5 && (
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-medium">
-                        +{party.attendees - 5}
-                      </div>
-                    )}
+                    </div>
+                    
+                    <div className="flex -space-x-2">
+                      {partyAttendeeAvatars[party.id]?.slice(0, 5).map((attendee, index) => (
+                        <Avatar key={index} className="border-2 border-background h-8 w-8">
+                          <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name || "Attendee"} />
+                          <AvatarFallback>{(attendee.name && attendee.name.charAt(0)) || "?"}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {partyAttendeeAvatars[party.id]?.length > 5 && (
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium border-2 border-background">
+                          +{partyAttendeeAvatars[party.id].length - 5}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -237,69 +289,88 @@ function DashboardContent() {
         </TabsContent>
 
         <TabsContent value="joined">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {joinedParties.map((party) => (
-              <Card key={party.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{party.name}</CardTitle>
-                      <CardDescription className="mt-1">Created by {party.creatorName}</CardDescription>
-                    </div>
-                    <div className="flex-shrink-0">{getStatusBadge(party.status)}</div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(party.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <Users className="h-4 w-4" />
-                    <span>{party.attendees} attendees</span>
-                  </div>
-
-                  <div className="flex -space-x-2 mb-4">
-                    {party.attendeeList?.slice(0, 5).map((attendee) => (
-                      <Avatar key={attendee.id} className="border-2 border-background">
-                        <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name} />
-                        <AvatarFallback>{attendee.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {party.attendees > 5 && (
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-medium">
-                        +{party.attendees - 5}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openPartyDetail(party)}>
-                      View Details
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Leave Party
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {joinedPartiesData.map((party) => (
+      <Card key={party.id} className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>{party.name}</CardTitle>
+              <CardDescription className="mt-1">
+                Created by {party.creator_name || "Unknown"}
+              </CardDescription>
+            </div>
+            <div className="flex-shrink-0">{getStatusBadge(party.status || "active")}</div>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <div className="space-y-3 text-sm text-muted-foreground mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <span>{new Date(party.created_at).toLocaleDateString()}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              <span>
+                {party.location || (party.lat && party.lng 
+                  ? `${party.lat.toFixed(4)}, ${party.lng.toFixed(4)}` 
+                  : "No location")}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>{party.attendees || 0} attendees</span>
+            </div>
+            
+            <div>
+              <p className="font-medium mt-2">Creator ID:</p>
+              <code className="text-xs bg-muted p-1 rounded">{party.user || party.creator_id}</code>
+            </div>
           </div>
 
-          {joinedParties.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">You haven't joined any parties yet.</p>
-              <Link href="/app">
-                <Button>
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Explore Parties
-                </Button>
-              </Link>
-            </div>
-          )}
-        </TabsContent>
+          <div className="flex -space-x-2 mb-4">
+            {partyAttendeeAvatars[party.id]?.slice(0, 5).map((attendee, index) => (
+              <Avatar key={index} className="border-2 border-background h-6 w-6">
+                <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name || "Attendee"} />
+                <AvatarFallback>{(attendee.name && attendee.name.charAt(0)) || "?"}</AvatarFallback>
+              </Avatar>
+            ))}
+            {partyAttendeeAvatars[party.id]?.length > 5 && (
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium border-2 border-background">
+                +{partyAttendeeAvatars[party.id].length - 5}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => openPartyDetail(party)}>
+              View Details
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1">
+              <XCircle className="h-4 w-4 mr-1" />
+              Leave Party
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+
+  {joinedPartiesData.length === 0 && (
+    <div className="text-center py-12">
+      <p className="text-muted-foreground mb-4">You haven't joined any parties yet.</p>
+      <Link href="/app">
+        <Button>
+          <MapPin className="mr-2 h-4 w-4" />
+          Explore Parties
+        </Button>
+      </Link>
+    </div>
+  )}
+</TabsContent>
       </Tabs>
 
       {/* Party Detail Modal */}
