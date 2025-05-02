@@ -193,7 +193,7 @@ export const getProfile = async () => {
   const { data: profile, error } = await supabase
     .from('profile')
     .select("*")
-    .eq("id", String(user.id)) // Only select the row where id matches current user
+    .eq("id", user.id) // Only select the row where id matches current user
     .single();
 
 
@@ -205,3 +205,22 @@ export const getProfile = async () => {
   return profile;
 }
 
+
+export const getPartiesCreatedByUser = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: parties, error } = await supabase
+    .from('Public')
+    .select("*")
+    .eq("user", user.id) // Only select the rows where user matches current user
+
+  if (error) {
+    console.error("Error fetching parties:", error);
+    return null;
+  }
+  console.log("Parties created by user:", parties);
+  return parties;
+}

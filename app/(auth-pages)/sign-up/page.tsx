@@ -4,12 +4,33 @@ import { SubmitButton } from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EyeOff, Facebook } from "lucide-react";
+import { EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { encodedRedirect } from "@/utils/utils";
 
 export default async function Signup(props: { searchParams: Promise<Message> }) {
   const searchParams = await props.searchParams;
+  
+  async function signInWithGoogle() {
+    "use server";
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `https://mhqczkxccrqreqdhptgs.supabase.co/auth/v1/callback`,
+      },
+    });
+
+    if (error) {
+      return encodedRedirect("error", "/sign-up", error.message);
+    }
+
+    if (data.url) {
+      return redirect(data.url);
+    }
+  }
   
   return (
     <main className="flex min-h-screen">
@@ -81,20 +102,12 @@ export default async function Signup(props: { searchParams: Promise<Message> }) 
               </div>
 
               <SubmitButton 
-  pendingText={
-    <div className="flex items-center justify-center">
-      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      Signing Up
-    </div>
-  }
-  formAction={signUpAction}
-  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
->
-  Sign Up
-</SubmitButton>
+                pendingText="Signing Up..."
+                formAction={signUpAction}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                Sign Up
+              </SubmitButton>
               
               <FormMessage message={searchParams} />
             </form>
@@ -108,8 +121,8 @@ export default async function Signup(props: { searchParams: Promise<Message> }) 
               </div>
             </div>
 
-            <div className="flex justify-center">
-              <button className="flex items-center justify-center gap-2 py-2 px-6 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 w-full">
+            <form action={signInWithGoogle}>
+              <button type="submit" className="flex items-center justify-center gap-2 py-2 px-6 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 w-full">
                 <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -130,19 +143,18 @@ export default async function Signup(props: { searchParams: Promise<Message> }) 
                 </svg>
                 <span className="text-sm font-medium">Continue with Google</span>
               </button>
-            </div>
+            </form>
             
             <div className="text-center text-sm">
               <span className="text-gray-500">Already Have an Account?</span>{" "}
-              <Link href="/sign-up" className="font-medium text-emerald-600 hover:text-emerald-500">
+              <Link href="/sign-in" className="font-medium text-emerald-600 hover:text-emerald-500">
                 Sign In
               </Link>
             </div>
           </div>
         </div>
       </div>
-
-    
     </main>
   );
 }
+

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Edit, Trash2, Plus, ArrowRight, XCircle } from "lucide-react"
 import Link from "next/link"
-import { getProfile } from "@/app/actions"
+import { getPartiesCreatedByUser, getProfile } from "@/app/actions"
 
 // Types
 interface Location {
@@ -48,166 +48,61 @@ interface User {
 }
 
 // Mock user data - in a real app, this would come from your authentication system
-console.log(getProfile())
-
 const mockUser: User = {
-  id: "user-1",
-  name: "Alex Johnson",
-  email: "alex@example.com",
+  id: "",
+  name: "",
+  email: "",
   avatar: "",
-  createdParties: ["party-1", "party-3"],
-  joinedParties: ["party-2", "party-4"],
+  createdParties: [],
+  joinedParties: [],
 }
 
-// Mock party data - in a real app, this would come from your API
-const mockParties: Party[] = [
-  {
-    id: "party-1",
-    name: "Beach Bonfire",
-    description: "Join us for a fun beach bonfire with music and snacks!",
-    location: { lat: 40.7128, lng: -74.006 },
-    attendees: 12,
-    attendeeList: [
-      {
-        id: "user-2",
-        name: "Jamie Smith",
-        joinedAt: "2023-04-15T14:30:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-3",
-        name: "Taylor Brown",
-        joinedAt: "2023-04-15T15:45:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-4",
-        name: "Jordan Lee",
-        joinedAt: "2023-04-15T16:20:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-    ],
-    creatorId: "user-1",
-    creatorName: "Alex Johnson",
-    color: "#f43f5e",
-    createdAt: "2023-04-15T10:30:00Z",
-    status: "active",
-    category: "Social",
-  },
-  {
-    id: "party-2",
-    name: "Downtown Art Walk",
-    description: "Explore local galleries and street art in the downtown area.",
-    location: { lat: 40.7228, lng: -73.996 },
-    attendees: 8,
-    attendeeList: [
-      {
-        id: "user-5",
-        name: "Casey Wilson",
-        joinedAt: "2023-04-16T09:30:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-1",
-        name: "Alex Johnson",
-        joinedAt: "2023-04-16T10:15:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-    ],
-    creatorId: "user-5",
-    creatorName: "Casey Wilson",
-    color: "#8b5cf6",
-    createdAt: "2023-04-16T08:00:00Z",
-    status: "active",
-    category: "Art",
-  },
-  {
-    id: "party-3",
-    name: "Rooftop Yoga",
-    description: "Morning yoga session with amazing city views. All levels welcome!",
-    location: { lat: 40.7328, lng: -73.986 },
-    attendees: 5,
-    attendeeList: [
-      {
-        id: "user-6",
-        name: "Riley Green",
-        joinedAt: "2023-04-17T07:10:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-7",
-        name: "Morgan Taylor",
-        joinedAt: "2023-04-17T07:15:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-    ],
-    creatorId: "user-1",
-    creatorName: "Alex Johnson",
-    color: "#10b981",
-    createdAt: "2023-04-17T06:00:00Z",
-    status: "completed",
-    category: "Fitness",
-  },
-  {
-    id: "party-4",
-    name: "Tech Meetup",
-    description: "Networking event for developers and tech enthusiasts.",
-    location: { lat: 40.7428, lng: -74.016 },
-    attendees: 15,
-    attendeeList: [
-      {
-        id: "user-8",
-        name: "Sam Davis",
-        joinedAt: "2023-04-18T17:30:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-1",
-        name: "Alex Johnson",
-        joinedAt: "2023-04-18T17:45:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      {
-        id: "user-9",
-        name: "Quinn Miller",
-        joinedAt: "2023-04-18T18:00:00Z",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-    ],
-    creatorId: "user-8",
-    creatorName: "Sam Davis",
-    color: "#3b82f6",
-    createdAt: "2023-04-18T16:00:00Z",
-    status: "active",
-    category: "Technology",
-  },
-]
-
-export default function Dashboard() {
+function DashboardContent() {
   const [user, setUser] = useState<User>(mockUser)
-  const [parties, setParties] = useState<Party[]>(mockParties)
+  const [parties, setParties] = useState<Party[]>([])
   const [selectedParty, setSelectedParty] = useState<Party | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
-  // In a real app, you would fetch user data and parties from your API
   useEffect(() => {
-    // Fetch user data
-    // const fetchUser = async () => {
-    //   const response = await fetch('/api/user');
-    //   const userData = await response.json();
-    //   setUser(userData);
-    // }
-    // Fetch parties
-    // const fetchParties = async () => {
-    //   const response = await fetch('/api/parties');
-    //   const partiesData = await response.json();
-    //   setParties(partiesData);
-    // }
-    // fetchUser();
-    // fetchParties();
-  }, [])
+    getProfile().then(profile => {
+      if (profile && profile.email) {
+        setUser({
+          id: profile.id,
+          name: profile.display_name || "No Name",
+          email: profile.email,
+          avatar: profile.public_profile_image || "",
+          createdParties: [],
+          joinedParties: [],
+        });
+      }
+    });
+  }, []);
 
-  const createdParties = parties.filter((party) => user.createdParties?.includes(party.id))
+  useEffect(() => {
+    getPartiesCreatedByUser().then(data => {
+      if (Array.isArray(data)) {
+        setParties(
+          data.map((party: any) => ({
+            id: party.id,
+            name: party.name,
+            description: party.description,
+            location: { lat: party.lat, lng: party.lng },
+            attendees: party.attendees,
+            attendeeList: [], // Fill if you have attendee data
+            creatorId: party.user,
+            creatorName: user.name,
+            color: party.color,
+            createdAt: party.createdAt,
+            status: "active", // Or party.status if available
+            category: "General", // Or party.category if available
+          }))
+        )
+      }
+    })
+  }, [user.name])
+
+  // Use parties directly for created parties
+  const createdParties = parties
   const joinedParties = parties.filter(
     (party) => user.joinedParties?.includes(party.id) && !user.createdParties?.includes(party.id),
   )
@@ -403,8 +298,7 @@ export default function Dashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Party Detail Modal would be imported and used here */}
-      {/* For frontend-only implementation, we'll just show a placeholder */}
+      {/* Party Detail Modal */}
       {isDetailModalOpen && selectedParty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -417,5 +311,22 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="p-8 text-center rounded-lg border border-gray-200 bg-gray-100 text-gray-500 shadow-md max-w-md mx-auto mt-16"
+          style={{ minHeight: 120 }}
+        >
+          Loading profile...
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   )
 }
