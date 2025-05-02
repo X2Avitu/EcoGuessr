@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Edit, Trash2, Plus, ArrowRight, XCircle } from "lucide-react"
 import Link from "next/link"
-import { getPartiesCreatedByUser, getProfile } from "@/app/actions"
+import { getGoogleAccountInfo, getPartiesCreatedByUser, getProfile } from "@/app/actions"
 
 // Types
 interface Location {
@@ -56,12 +56,12 @@ const mockUser: User = {
   createdParties: [],
   joinedParties: [],
 }
-
 function DashboardContent() {
   const [user, setUser] = useState<User>(mockUser)
   const [parties, setParties] = useState<Party[]>([])
   const [selectedParty, setSelectedParty] = useState<Party | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [googleProfileImage, setGoogleProfileImage] = useState<string | null>(null)
 
   useEffect(() => {
     getProfile().then(profile => {
@@ -76,6 +76,11 @@ function DashboardContent() {
         });
       }
     });
+    getGoogleAccountInfo().then(info => {
+      if (info && info.profile_image) {
+        setGoogleProfileImage(info.profile_image);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -88,19 +93,18 @@ function DashboardContent() {
             description: party.description,
             location: { lat: party.lat, lng: party.lng },
             attendees: party.attendees,
-            attendeeList: [], // Fill if you have attendee data
+            attendeeList: [],
             creatorId: party.user,
             creatorName: user.name,
             color: party.color,
             createdAt: party.createdAt,
-            status: "active", // Or party.status if available
-            category: "General", // Or party.category if available
+            status: "active",
+            category: "General",
           }))
         )
       }
     })
   }, [user.name])
-
   // Use parties directly for created parties
   const createdParties = parties
   const joinedParties = parties.filter(
@@ -125,12 +129,13 @@ function DashboardContent() {
     }
   }
 
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+            <AvatarImage src={googleProfileImage || user.avatar || "/placeholder.svg"} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
@@ -145,7 +150,6 @@ function DashboardContent() {
           </Button>
         </Link>
       </div>
-
       <Tabs defaultValue="created" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="created">My Parties ({createdParties.length})</TabsTrigger>

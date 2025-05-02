@@ -224,3 +224,28 @@ export const getPartiesCreatedByUser = async () => {
   console.log("Parties created by user:", parties);
   return parties;
 }
+
+export const getGoogleAccountInfo = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  // Find the Google identity if it exists
+  const googleIdentity = user.identities?.find(
+    (identity: any) => identity.provider === "google"
+  );
+
+  if (!googleIdentity) {
+    return null; // User did not sign in with Google
+  }
+
+  // Return Google account info
+  return {
+    email: user.email,
+    provider: googleIdentity.provider,
+    provider_id: googleIdentity.id,
+    full_identity: googleIdentity,
+    profile_image: googleIdentity.identity_data?.avatar_url,
+  };
+};
