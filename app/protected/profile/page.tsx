@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Edit, Trash2, Plus, ArrowRight, XCircle } from "lucide-react"
 import Link from "next/link"
+import { getProfile } from "@/app/actions"
 
 // Types
 interface Location {
@@ -47,11 +48,13 @@ interface User {
 }
 
 // Mock user data - in a real app, this would come from your authentication system
+console.log(getProfile())
+
 const mockUser: User = {
   id: "user-1",
   name: "Alex Johnson",
   email: "alex@example.com",
-  avatar: "/placeholder.svg?height=40&width=40",
+  avatar: "",
   createdParties: ["party-1", "party-3"],
   joinedParties: ["party-2", "party-4"],
 }

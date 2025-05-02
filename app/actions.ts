@@ -184,3 +184,24 @@ export async function createParty(data: {
   }
   return insertedData;
 }
+export const getProfile = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: profile, error } = await supabase
+    .from('profile')
+    .select("*")
+    .eq("id", String(user.id)) // Only select the row where id matches current user
+    .single();
+
+
+  if (error) {
+    console.error("Error fetching profile:", error);
+    return null;
+  }
+  console.log("Profile data:", profile);
+  return profile;
+}
+
