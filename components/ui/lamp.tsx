@@ -33,7 +33,7 @@ export function GradientBackground() {
     ]
 
     // Create blobs distributed across the entire page
-    const blobs = []
+    const blobs: any[] = []
 
     // Create blobs for the top section
     for (let i = 0; i < 4; i++) {

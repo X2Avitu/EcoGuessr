@@ -1,408 +1,148 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Users, Edit, Trash2, Plus, ArrowRight, XCircle } from "lucide-react"
-import Link from "next/link"
-import { getAttendeesList, getGoogleAccountInfo, getJoinedParties, getPartiesCreatedByUser, getProfile, getProfileById } from "@/app/actions"
+import { useEffect, useState } from "react";
+import { getProfile, getSquads, Squad } from "@/app/actions";
+import { Award, Share2, MapPin, Map as MapIcon, Calendar, Flame } from "lucide-react";
+import { motion } from "framer-motion";
 
-// Types
-interface Location {
-  lat: number
-  lng: number
-}
-
-interface Attendee {
-  id: string
-  name: string
-  joinedAt: string
-  avatar: string
-}
-
-interface Party {
-  id: string
-  name: string
-  description: string
-  location: Location
-  attendees: number
-  attendeeList: Attendee[]
-  creatorId: string
-  creatorName: string
-  color: string
-  createdAt: string
-  status: "active" | "cancelled" | "completed"
-  category: string
-}
-
-interface User {
-  id: string
-  name: string
-  email: string
-  avatar: string
-  createdParties: string[]
-  joinedParties: string[]
-}
-
-// Mock user data - in a real app, this would come from your authentication system
-const mockUser: User = {
-  id: "",
-  name: "",
-  email: "",
-  avatar: "",
-  createdParties: [],
-  joinedParties: [],
-}
-
-function DashboardContent() {
-  const [user, setUser] = useState<User>(mockUser)
-  const [parties, setParties] = useState<Party[]>([])
-  const [selectedParty, setSelectedParty] = useState<Party | null>(null)
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
-  const [googleProfileImage, setGoogleProfileImage] = useState<string | null>(null)
-  const [googleName, setGoogleName] = useState<string | null>(null)
-  const [partyAttendeeAvatars, setPartyAttendeeAvatars] = useState<Record<string, { id: string; avatar: string; name: string }[]>>({});
-  const [joinedPartiesData, setJoinedPartiesData] = useState<any[]>([]);
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [userSquad, setUserSquad] = useState<Squad | null>(null);
 
   useEffect(() => {
-    console.log(getJoinedParties())
-  }
-, [])
-
-  useEffect(() => {
-    getProfile().then(profile => {
-      if (profile && profile.email) {
-        setUser({
-          id: profile.id,
-          name: profile.display_name || "No Name",
-          email: profile.email,
-          avatar: profile.public_profile_image || "",
-          createdParties: [],
-          joinedParties: [],
-        });
-      }
-    });
-    getGoogleAccountInfo().then(info => {
-      if (info) {
-        if (info.profile_image) setGoogleProfileImage(info.profile_image);
-        if (info.full_identity?.identity_data?.full_name) setGoogleName(info.full_identity.identity_data.full_name);
-      }
-    });
+    const loadData = async () => {
+        const user = await getProfile();
+        const squads = await getSquads();
+        setProfile(user);
+        if (!user) return;
+        const mySquad = squads.find((s) => user.joinedParties.includes(s.id));
+        if (mySquad) setUserSquad(mySquad);
+    };
+    loadData();
   }, []);
-  useEffect(() => {
-    getJoinedParties().then(data => {
-      if (Array.isArray(data)) {
-        setJoinedPartiesData(data);
-      }
-    }).catch(err => console.error("Error fetching joined parties:", err));
-  }, []);
-  useEffect(() => {
-    getPartiesCreatedByUser().then(data => {
-      if (Array.isArray(data)) {
-        setParties(
-          data.map((party: any) => ({
-            id: party.id,
-            name: party.name,
-            description: party.description,
-            location: { lat: party.lat, lng: party.lng },
-            attendees: party.attendees,
-            attendeeList: [],
-            creatorId: party.user,
-            creatorName: user.name,
-            color: party.color,
-            createdAt: party.createdAt,
-            status: "active",
-            category: "General",
-          }))
-        )
-      }
-    })
-  }, [user.name])
 
-
-  useEffect(() => {
-    // For each party, fetch its attendees
-    parties.forEach(party => {
-      getAttendeesList(party.id).then(async (attendees: string[]) => {
-        const profiles = await Promise.all(
-          attendees.map(async (id) => {
-            try {
-              const profile = await getProfileById(id);
-              return {
-                id,
-                avatar: profile?.public_profile_image || "/placeholder.svg",
-                name: profile?.display_name || "User",
-              };
-            } catch (error) {
-              console.error("Error fetching profile:", error);
-              return { id, avatar: "/placeholder.svg", name: "User" };
-            }
-          })
-        );
-        
-        setPartyAttendeeAvatars(prev => ({
-          ...prev,
-          [party.id]: profiles
-        }));
-      }).catch(err => console.error("Error fetching attendees:", err));
-    });
-  }, [parties]);
-
-  const createdParties = parties
-  const joinedParties = parties.filter(
-    (party) => user.joinedParties?.includes(party.id) && !user.createdParties?.includes(party.id),
-  )
-
-  const openPartyDetail = (party: Party) => {
-    setSelectedParty(party)
-    setIsDetailModalOpen(true)
-  }
-
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-500">Active</Badge>
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>
-      case "completed":
-        return <Badge variant="outline">Completed</Badge>
-      default:
-        return <Badge variant="secondary">Unknown</Badge>
-    }
-  }
-
-  // Prefer Google name if user.name is "No Name"
-  const displayName = (user.name === "No Name" && googleName) ? googleName : user.name
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={googleProfileImage || user.avatar || "/placeholder.svg"} alt={displayName} />
-            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-2xl font-bold">{displayName}'s Dashboard</h1>
-            <p className="text-muted-foreground">{user.email}</p>
-          </div>
-        </div>
-        <Link href="/map">
-          <Button>
-            <MapPin className="mr-2 h-4 w-4" />
-            Back to Map
-          </Button>
-        </Link>
+  if (!profile)
+    return (
+      <div className="flex h-full items-center justify-center bg-[#0A0A0A] p-8 text-gray-400">
+        Could not load profile.
       </div>
-      
-      <Tabs defaultValue="created" className="w-full">
-      <TabsList className="mb-6">
-  <TabsTrigger value="created">My Parties ({createdParties.length})</TabsTrigger>
-  <TabsTrigger value="joined">Joined Parties ({joinedPartiesData.length})</TabsTrigger>
-</TabsList>
+    );
 
-        <TabsContent value="created">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/app" className="block h-full">
-              <Card className="border-dashed h-full flex flex-col justify-center items-center cursor-pointer hover:border-primary transition-colors">
-                <CardContent className="pt-6 text-center">
-                  <div className="rounded-full bg-primary/10 p-6 mx-auto mb-4 w-fit">
-                    <Plus className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle className="mb-2">Create New Party</CardTitle>
-                  <CardDescription>Plan a new event and invite people to join</CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-
-            {createdParties.map((party) => (
-              <Card key={party.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{party.name}</CardTitle>
-                      <CardDescription className="mt-1">{party.description}</CardDescription>
-                    </div>
-                    <div className="flex-shrink-0">{getStatusBadge(party.status)}</div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(party.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      {/* <span>{party.attendees || 0} attendees</span> */}
-                      <span>{0}</span>
-
-                    </div>
-                    
-                    <div className="flex -space-x-2">
-                      {partyAttendeeAvatars[party.id]?.slice(0, 5).map((attendee, index) => (
-                        <Avatar key={index} className="border-2 border-background h-8 w-8">
-                          <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name || "Attendee"} />
-                          <AvatarFallback>{(attendee.name && attendee.name.charAt(0)) || "?"}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                      {partyAttendeeAvatars[party.id]?.length > 5 && (
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium border-2 border-background">
-                          +{partyAttendeeAvatars[party.id].length - 5}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openPartyDetail(party)}>
-                      Details
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {createdParties.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">You haven't created any parties yet.</p>
-              <Link href="/app">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Party
-                </Button>
-              </Link>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="joined">
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {joinedPartiesData.map((party) => (
-      <Card key={party.id} className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>{party.name}</CardTitle>
-              <CardDescription className="mt-1">
-                Created by {party.creator_name || "Unknown"}
-              </CardDescription>
-            </div>
-            <div className="flex-shrink-0">{getStatusBadge(party.status || "active")}</div>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-3">
-          <div className="space-y-3 text-sm text-muted-foreground mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>{new Date(party.created_at).toLocaleDateString()}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>
-                {party.location || (party.lat && party.lng 
-                  ? `${party.lat.toFixed(4)}, ${party.lng.toFixed(4)}` 
-                  : "No location")}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span>{party.attendees || 0} attendees</span>
-            </div>
-            
-            <div>
-              <p className="font-medium mt-2">Creator ID:</p>
-              <code className="text-xs bg-muted p-1 rounded">{party.user || party.creator_id}</code>
-            </div>
-          </div>
-
-          <div className="flex -space-x-2 mb-4">
-            {partyAttendeeAvatars[party.id]?.slice(0, 5).map((attendee, index) => (
-              <Avatar key={index} className="border-2 border-background h-6 w-6">
-                <AvatarImage src={attendee.avatar || "/placeholder.svg"} alt={attendee.name || "Attendee"} />
-                <AvatarFallback>{(attendee.name && attendee.name.charAt(0)) || "?"}</AvatarFallback>
-              </Avatar>
-            ))}
-            {partyAttendeeAvatars[party.id]?.length > 5 && (
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium border-2 border-background">
-                +{partyAttendeeAvatars[party.id].length - 5}
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1" onClick={() => openPartyDetail(party)}>
-              View Details
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1">
-              <XCircle className="h-4 w-4 mr-1" />
-              Leave Party
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-
-  {joinedPartiesData.length === 0 && (
-    <div className="text-center py-12">
-      <p className="text-muted-foreground mb-4">You haven't joined any parties yet.</p>
-      <Link href="/app">
-        <Button>
-          <MapPin className="mr-2 h-4 w-4" />
-          Explore Parties
-        </Button>
-      </Link>
-    </div>
-  )}
-</TabsContent>
-      </Tabs>
-
-      {/* Party Detail Modal */}
-      {isDetailModalOpen && selectedParty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">{selectedParty.name}</h2>
-            <p className="mb-4">{selectedParty.description}</p>
-            <div className="flex justify-end">
-              <Button onClick={() => setIsDetailModalOpen(false)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export default function Dashboard() {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="p-8 text-center rounded-lg border border-gray-200 bg-gray-100 text-gray-500 shadow-md max-w-md mx-auto mt-16"
-          style={{ minHeight: 120 }}
-        >
-          Loading profile...
+    <div className="min-h-screen bg-[#0A0A0A] pt-24 px-6 md:px-12 pb-20 overflow-x-hidden">
+      <div className="max-w-6xl mx-auto space-y-12">
+        
+        <div className="flex flex-col md:flex-row gap-12 items-start">
+            <motion.div 
+               initial={{ x: -50, opacity: 0 }}
+               animate={{ x: 0, opacity: 1 }}
+               className="w-full md:w-1/3 space-y-8"
+            >
+               {/* User Card */}
+               <div className="bg-[#111] p-8 rounded-3xl border border-[#333] relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-colors"></div>
+                  
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-orange-500 mb-6 flex items-center justify-center font-bebas text-5xl text-black border-4 border-[#0a0a0a] shadow-xl">
+                      {profile.display_name.charAt(0)}
+                  </div>
+                  <h1 className="font-bebas text-5xl text-white tracking-widest leading-none mb-1">{profile.display_name}</h1>
+                  <p className="font-dmsans text-gray-500 font-bold uppercase tracking-widest text-sm mb-8">@{profile.username}</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-[#1a1a1a] p-4 rounded-xl border border-[#222]">
+                          <div className="font-bebas text-4xl text-primary">87 KG</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Waste Removed</div>
+                      </div>
+                      <div className="bg-[#1a1a1a] p-4 rounded-xl border border-[#222]">
+                          <div className="font-bebas text-4xl text-white">12</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Cleanups</div>
+                      </div>
+                  </div>
+               </div>
+
+               {/* Squad Assigmnent */}
+               {userSquad && (
+                   <div className="bg-[#111] p-6 rounded-3xl border border-[#333]">
+                       <h3 className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-4">ACTIVE SQUAD</h3>
+                       <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 rounded-xl flex items-center justify-center border-2 border-[#1a1a1a]" style={{backgroundColor: userSquad.color}}>
+                               <UsersIcon />
+                           </div>
+                           <div>
+                               <h4 className="font-bebas text-2xl text-white tracking-widest">{userSquad.name}</h4>
+                               <p className="text-xs text-gray-400 font-bold uppercase">{userSquad.neighborhood} · {userSquad.members} Members</p>
+                           </div>
+                       </div>
+                   </div>
+               )}
+            </motion.div>
+
+            <motion.div 
+               initial={{ x: 50, opacity: 0 }}
+               animate={{ x: 0, opacity: 1 }}
+               transition={{ delay: 0.2 }}
+               className="w-full md:w-2/3 space-y-12"
+            >
+                {/* 2025 WRAPPED CARD */}
+                <div>
+                   <h3 className="font-bebas text-4xl text-white tracking-widest mb-6">YEARLY IMPACT REPORT</h3>
+                   <div className="bg-gradient-to-br from-primary to-green-600 rounded-3xl p-1 shadow-[0_0_50px_rgba(184,255,60,0.15)] relative overflow-hidden group hover:scale-[1.02] transition-transform cursor-pointer">
+                      <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Dissolve_Noise_Texture.png')] mix-blend-overlay opacity-50 z-10 pointer-events-none"></div>
+                      <div className="bg-[#0A0A0A] rounded-[22px] p-8 lg:p-12 relative z-20 h-full flex flex-col md:flex-row items-center justify-between gap-8">
+                         <div>
+                            <div className="inline-flex items-center gap-2 bg-primary/20 text-primary px-3 py-1 rounded-md text-xs font-bold font-dmsans uppercase tracking-widest mb-6">
+                               <MapIcon size={14}/> Brampton, ON
+                            </div>
+                            <h2 className="font-bebas text-5xl md:text-7xl text-white leading-none">THE 2025<br/><span className="text-primary italic">WRAPPED</span></h2>
+                            <p className="text-gray-400 font-dmsans uppercase text-sm font-bold tracking-widest mt-6 max-w-sm">
+                               You personally prevented 87kg of hazardous waste from entering the local ecosystem this year.
+                            </p>
+                         </div>
+                         <div className="text-center md:text-right">
+                            <div className="font-bebas text-8xl md:text-9xl text-white opacity-20 leading-[0.8] mb-4 group-hover:opacity-100 group-hover:text-primary transition-all duration-500">
+                               #12
+                            </div>
+                            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest">CITY RANKING</div>
+                         </div>
+                      </div>
+                      <button className="absolute top-6 right-6 z-30 w-10 h-10 bg-white rounded-full flex items-center justify-center text-black hover:scale-110 transition-transform shadow-xl">
+                          <Share2 size={18}/>
+                      </button>
+                   </div>
+                </div>
+
+                {/* BADGE WALL */}
+                <div>
+                   <h3 className="font-bebas text-4xl text-white tracking-widest mb-6 flex items-center gap-3">
+                       <Award className="text-primary" /> BADGE WALL
+                   </h3>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {badges.map((badge, i) => (
+                         <div key={i} className="bg-[#111] p-6 rounded-2xl border border-[#222] flex flex-col items-center justify-center text-center group hover:border-primary transition-colors">
+                            <div className="w-16 h-16 rounded-full bg-[#1a1a1a] mb-4 flex items-center justify-center border-2 border-[#333] group-hover:border-primary transition-colors shadow-inner">
+                               <badge.icon className={`w-8 h-8 ${badge.color}`} />
+                            </div>
+                            <h4 className="font-bebas text-xl text-white mb-1">{badge.title}</h4>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{badge.date}</p>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+
+            </motion.div>
         </div>
-      }
-    >
-      <DashboardContent />
-    </Suspense>
-  )
+      </div>
+    </div>
+  );
 }
+
+function UsersIcon() {
+  return <Flame size={20} className="text-[#0a0a0a]" />;
+}
+
+const badges = [
+    { title: "First Cleanup", date: "Jan 12, 2024", icon: MapPin, color: "text-white" },
+    { title: "Squad Captain", date: "Feb 04, 2024", icon: Award, color: "text-primary" },
+    { title: "5-Week Streak", date: "Mar 18, 2024", icon: Flame, color: "text-orange-500" },
+    { title: "50KG Club", date: "Apr 22, 2024", icon: Calendar, color: "text-blue-400" },
+]

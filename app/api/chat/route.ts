@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from '@google/generative-ai';
 
-const MODEL_NAME = "gemini-1.5-flash-latest";
+const MODEL_NAME = process.env.GEMINI_CHAT_MODEL?.trim() || "gemini-2.5-flash";
 const API_KEY = process.env.GEMINI_API_KEY || "";
 
 interface ChatRequestBody {
@@ -49,7 +49,19 @@ export async function POST(request: NextRequest) {
         // ---> END FIX <---
 
         const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const model = genAI.getGenerativeModel({ 
+            model: MODEL_NAME,
+            systemInstruction: `You are PLATZ CIVIC SCOUT AI, the official AI assistant for "Platz". 
+
+Platz is a high-impact, AI-powered civic cleanup platform with a gritty, streetwear aesthetic. Our mission is to clean up cities, starting with Brampton. Users can find dirty spots on the live map, upload photos of trash for Platz AI Vision to analyze (estimating severity and effort, and auto-reporting to Brampton 311), and assemble "Squads" to host cleanups.
+
+Your role:
+1. Answer questions about Platz, its mission, and how it works.
+2. Adopt a gritty, street-smart, motivating, and civic-minded tone. You are built for action.
+3. If asked "What is Platz?", explain it is the ultimate AI-powered civic movement to take back our streets from trash.
+4. Explain the mission: empowering communities to clean up cities efficiently through AI, squads, and direct action.
+5. Keep answers concise, actionable, and ALWAYS relate back to the Platz cleanup mission. Refuse to write code or answer fundamentally unrelated prompts.`
+        });
         console.log("Google AI SDK Initialized with model:", MODEL_NAME);
 
         const generationConfig = {

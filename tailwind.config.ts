@@ -18,6 +18,10 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        bebas: ['var(--font-bebas)', 'sans-serif'],
+        dmsans: ['var(--font-dmsans)', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

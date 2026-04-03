@@ -1,14 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Send, X, MessageSquare } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Avatar } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { Send, X, Terminal, Cpu } from "lucide-react"
 
 type Message = {
   id: string
@@ -22,7 +17,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! How can I help you today?",
+      content: "PLATZ CIVIC SCOUT INITIALIZED... Ready to analyze local infrastructure or coordinate squad actions. Hit me.",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -69,8 +64,7 @@ export default function ChatWidget() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `API Error: ${response.status}`)
+        throw new Error(`API Error: ${response.status}`)
       }
 
       const data = await response.json()
@@ -83,14 +77,11 @@ export default function ChatWidget() {
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, botMessage])
-      } else {
-        throw new Error("Received empty or invalid response from AI")
       }
     } catch (err: any) {
-      console.error("Chat API Error:", err)
       const errorMessage: Message = {
         id: Date.now().toString(),
-        content: `Error: ${err.message || "Could not connect to AI."}`,
+        content: `SYS_ERROR: Connection to Scout Network severed.`,
         sender: "bot",
         timestamp: new Date(),
       }
@@ -114,163 +105,111 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Chat Button */}
+      {/* HUD Floating Button */}
       <motion.div
-        className="fixed bottom-6 right-6 z-50"
-        initial={{ scale: 0.8, opacity: 0 }}
+        className="fixed bottom-8 left-8 z-[100]"
+        initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 1 }}
       >
-        <Button
+        <button
           onClick={toggleChat}
-          size="lg"
-          className={cn(
-            "rounded-full w-14 h-14 shadow-lg transition-all duration-300",
-            isOpen
-              ? "bg-green-700 hover:bg-green-800"
-              : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
-          )}
+          className={`relative group rounded-xl w-16 h-16 flex items-center justify-center transition-all duration-300 border-2 ${
+            isOpen ? "bg-white border-white text-black" : "bg-[#0A0A0A] border-primary text-primary hover:bg-[#111]"
+          } shadow-[0_0_20px_rgba(184,255,60,0.3)]`}
         >
-          <motion.div animate={{ rotate: isOpen ? 45 : 0 }} transition={{ duration: 0.3 }}>
-            {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
+          <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.4, type: "spring" }}>
+            {isOpen ? <X size={28} /> : <Terminal size={28} />}
           </motion.div>
-        </Button>
+          {!isOpen && (
+              <span className="absolute -top-2 -right-2 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-[#0A0A0A]"></span>
+              </span>
+          )}
+        </button>
       </motion.div>
 
-      {/* Chat Panel */}
+      {/* Terminal Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed bottom-24 right-6 w-80 sm:w-96 h-[500px] max-h-[80vh] bg-white rounded-2xl shadow-2xl overflow-hidden z-40 flex flex-col border border-gray-300"
-            initial={{ y: 20, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 20, opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-28 left-8 w-80 sm:w-96 h-[500px] max-h-[80vh] bg-[#0A0A0A]/95 backdrop-blur-xl border border-primary/50 shadow-[0_0_40px_rgba(184,255,60,0.15)] flex flex-col z-[100]"
+            initial={{ y: 50, opacity: 0, scale: 0.95, clipPath: 'polygon(0 100%, 100% 100%, 100% 100%, 0% 100%)' }}
+            animate={{ y: 0, opacity: 1, scale: 1, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0% 100%)' }}
+            exit={{ y: 50, opacity: 0, scale: 0.95, clipPath: 'polygon(0 100%, 100% 100%, 100% 100%, 0% 100%)' }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
           >
-            {/* Chat Header */}
-            <div className="p-4 bg-gradient-to-r from-green-700 to-green-800 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8 border-2 border-white">
-                  <div className="flex h-full w-full items-center justify-center bg-green-900 text-green-200 font-semibold text-sm">
-                    AI
-                  </div>
-                </Avatar>
+            {/* HUD Header */}
+            <div className="p-4 border-b border-primary/30 flex items-center justify-between bg-[#111]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center border border-primary bg-primary/10 text-primary">
+                    <Cpu size={16} />
+                </div>
                 <div>
-                  <h3 className="font-medium">Chat Assistant</h3>
-                  <p className="text-xs text-green-200">Gemini-1.5-Flash</p>
+                  <h3 className="font-bebas text-2xl text-white leading-none">CIVIC SCOUT AI</h3>
+                  <p className="font-dmsans text-[10px] text-primary uppercase font-bold tracking-[0.2em] animate-pulse">Online & Monitoring</p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleChat}
-                className="text-white hover:bg-green-800/20 rounded-full h-8 w-8"
-              >
-                <X size={18} />
-              </Button>
+              <button onClick={toggleChat} className="text-gray-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
             </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 bg-white space-y-4">
+            {/* Chat Log */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6 font-mono text-sm scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={cn(
-                    "flex items-start gap-2 max-w-[85%]",
-                    message.sender === "user" ? "ml-auto flex-row-reverse" : "",
-                  )}
+                  initial={{ opacity: 0, x: message.sender === "user" ? 20 : -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`flex flex-col ${message.sender === "user" ? "items-end" : "items-start"}`}
                 >
-                  {message.sender === "bot" && (
-                    <Avatar className="h-8 w-8 mt-1">
-                      <div className="flex h-full w-full items-center justify-center bg-green-900 text-green-200 font-semibold text-sm">
-                        AI
-                      </div>
-                    </Avatar>
-                  )}
-                  <div
-                    className={cn(
-                      "rounded-2xl py-2 px-3",
-                      message.sender === "user"
-                        ? "bg-green-700 text-white rounded-tr-none"
-                        : "bg-gray-100 shadow-sm border border-gray-300 rounded-tl-none",
-                    )}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-[10px] mt-1 opacity-70">
-                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                  <div className="text-[10px] text-gray-600 mb-1">
+                      {message.sender === "user" ? "OPERATOR" : "SYS.AI"} // {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                   </div>
-                  {message.sender === "user" && (
-                    <Avatar className="h-8 w-8 mt-1">
-                      <div className="flex h-full w-full items-center justify-center bg-gray-300 text-gray-700 font-semibold text-sm">
-                        U
-                      </div>
-                    </Avatar>
-                  )}
+                  <div className={`p-3 border max-w-[85%] ${
+                      message.sender === "user" 
+                        ? "bg-primary text-black border-primary font-bold" 
+                        : "bg-[#111] text-primary border-primary/30"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
                 </motion.div>
               ))}
 
-              {/* Typing indicator */}
               {isTyping && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2 max-w-[85%]"
-                >
-                  <Avatar className="h-8 w-8 mt-1">
-                    <div className="flex h-full w-full items-center justify-center bg-green-900 text-green-200 font-semibold text-sm">
-                      AI
-                    </div>
-                  </Avatar>
-                  <div className="bg-gray-100 rounded-2xl rounded-tl-none py-2 px-4 shadow-sm border border-gray-300">
-                    <div className="flex space-x-1">
-                      <motion.div
-                        className="w-2 h-2 rounded-full bg-green-700"
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1, delay: 0 }}
-                      />
-                      <motion.div
-                        className="w-2 h-2 rounded-full bg-green-700"
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1, delay: 0.2 }}
-                      />
-                      <motion.div
-                        className="w-2 h-2 rounded-full bg-green-700"
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1, delay: 0.4 }}
-                      />
-                    </div>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-start">
+                  <div className="text-[10px] text-gray-600 mb-1">SYS.AI // COMPUTING</div>
+                  <div className="p-3 border bg-[#111] text-primary border-primary/30 flex gap-2 w-16">
+                     <div className="w-1.5 h-3 bg-primary animate-[pulse_1s_infinite_0ms]"></div>
+                     <div className="w-1.5 h-3 bg-primary animate-[pulse_1s_infinite_200ms]"></div>
+                     <div className="w-1.5 h-3 bg-primary animate-[pulse_1s_infinite_400ms]"></div>
                   </div>
                 </motion.div>
               )}
-
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Chat Input */}
-            <form
-              onSubmit={handleSubmit}
-              className="p-3 border-t border-gray-300 bg-white flex gap-2"
-            >
-              <Input
+            {/* Input Terminal */}
+            <form onSubmit={handleSubmit} className="p-3 border-t border-primary/30 bg-[#111] flex gap-2">
+              <div className="text-primary font-mono flex items-center justify-center pl-2">{">"}</div>
+              <input
                 ref={inputRef}
                 type="text"
-                placeholder="Type your message..."
+                placeholder="Enter command..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="flex-1 focus-visible:ring-green-700"
+                className="flex-1 bg-transparent border-none text-white font-mono placeholder:text-gray-700 focus:outline-none focus:ring-0 text-sm"
               />
-              <Button
+              <button
                 type="submit"
-                size="icon"
                 disabled={!inputValue.trim()}
-                className="bg-green-700 hover:bg-green-800 text-white rounded-full h-10 w-10 flex items-center justify-center"
+                className="w-10 h-10 flex items-center justify-center bg-primary text-black hover:bg-white disabled:opacity-50 disabled:bg-[#222] disabled:text-gray-600 transition-colors"
               >
-                <Send size={18} />
-              </Button>
+                <Send size={16} />
+              </button>
             </form>
           </motion.div>
         )}

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { v4 as uuidv4 } from "uuid"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,32 +35,21 @@ export function CreatePartyForm({ addParty, userLocation, defaultLocation = fals
     },
   })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (!userLocation && useCurrentLocation) return
 
     const location = useCurrentLocation
       ? userLocation!
       : { lat: Number.parseFloat(data.customLat), lng: Number.parseFloat(data.customLng) }
 
-    // Generate a random color for the party marker
-    const colors = ["#f43f5e", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
-    const randomColor = colors[Math.floor(Math.random() * colors.length)]
-
-    const newParty: Party = {
-      id: uuidv4(),
+    const serverParty = await createParty({
       name: data.name,
       description: data.description,
       lat: location.lat,
       lng: location.lng,
-      attendees: 1, // Creator is the first attendee
-      color: randomColor,
-      createdAt: new Date().toISOString(),
-      user: null, // Assuming you want to set this later
-    }
+    })
 
-    createParty(newParty) // Assuming you have a function to create the party in your database
-    
-    addParty(newParty)
+    addParty(serverParty)
     reset()
   }
 

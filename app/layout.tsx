@@ -1,41 +1,24 @@
-// Import the ChatWidget component at the top
-import ChatWidget from '@/components/ChatWidget'; // Ensure this path matches where you saved ChatWidget.tsx
-
-// --- Keep all your existing imports ---
-import DeployButton from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import HeaderAuth from "@/components/header-auth";
+import ChatWidget from "@/components/ChatWidget";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
-import { Geist } from "next/font/google"; // Corrected import name for font object
-import { ThemeProvider } from "next-themes";
-import Link from "next/link";
+import { Bebas_Neue, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { SidebarDemo } from "@/components/sidebar";
-import Navbar from "@/components/navbar";
-import { Framer, Sidebar } from "lucide-react";
-import Footer from "@/components/footer";
-// --- End of existing imports ---
-
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
 
 export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  metadataBase: new URL("http://localhost:3000"),
+  title: "Platz - Civic Cleanup Movement",
+  description: "Turn neighborhood trash cleanup into a competitive, social, AI-powered civic movement.",
 };
 
-// --- Instantiate the font correctly ---
-// Use the font object directly in className or through a variable
-const geist = Geist({ // Renamed variable to lowercase 'geist' for convention
-  display: "swap",
+const bebas = Bebas_Neue({
+  weight: "400",
   subsets: ["latin"],
-  // variable: '--font-geist-sans' // Optional: if you want to use it as a CSS variable
+  variable: "--font-bebas",
 });
-// --- End of font instantiation ---
 
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dmsans",
+});
 
 export default function RootLayout({
   children,
@@ -43,24 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Apply the font class to html or body
-    <html lang="en" className={geist.className} suppressHydrationWarning>
-      <body
-        className="antialiased" // You can keep or merge other body classes
-      >
-        {/* Keep ThemeProvider if you are using it */}
-        {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
-          {/* You might have other global layout components like Navbar, Sidebar here */}
-          {/* e.g., <Navbar /> */}
-
-          <main>{children}</main> {/* Render the specific page content */}
-
-          {/* You might have other global layout components like Footer here */}
-          {/* e.g., <Footer /> */}
-
-          {/* Add the ChatWidget HERE, inside the body but outside the main content flow */}
+    <html lang="en" className={`${bebas.variable} ${dmSans.variable} dark`} suppressHydrationWarning>
+      <body className="antialiased font-dmsans bg-background text-foreground">
+          <main>{children}</main>
           <ChatWidget />
-        {/* </ThemeProvider> */}
       </body>
     </html>
   );
