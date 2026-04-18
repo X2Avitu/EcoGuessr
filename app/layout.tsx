@@ -1,24 +1,19 @@
-import ChatWidget from "@/components/ChatWidget";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { Bebas_Neue, DM_Sans } from "next/font/google";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-export const metadata = {
-  metadataBase: new URL("http://localhost:3000"),
-  title: "Platz - Civic Cleanup Movement",
-  description: "Turn neighborhood trash cleanup into a competitive, social, AI-powered civic movement.",
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "EcoGuesser — The Biodiversity Game",
+  description: "Guess the species. Learn the science. Help the planet. A daily Wordle-style biodiversity challenge.",
+  keywords: ["biodiversity", "ecology", "nature", "guessing game", "conservation", "environment"],
+  openGraph: {
+    title: "EcoGuesser — The Biodiversity Game",
+    description: "Guess the species. Learn the science. Help the planet.",
+    type: "website",
+  },
 };
-
-const bebas = Bebas_Neue({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-bebas",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dmsans",
-});
 
 export default function RootLayout({
   children,
@@ -26,10 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bebas.variable} ${dmSans.variable} dark`} suppressHydrationWarning>
-      <body className="antialiased font-dmsans bg-background text-foreground">
-          <main>{children}</main>
-          <ChatWidget />
+    <html lang="en">
+      <body className={`${inter.className} bg-background text-foreground antialiased selection:bg-emerald-200 selection:text-emerald-900`}>
+        {children}
       </body>
     </html>
   );

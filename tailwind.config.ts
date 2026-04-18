@@ -19,8 +19,9 @@ const config = {
     },
     extend: {
       fontFamily: {
-        bebas: ['var(--font-bebas)', 'sans-serif'],
-        dmsans: ['var(--font-dmsans)', 'sans-serif'],
+        inter: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        mono:  ['JetBrains Mono', 'Courier New', 'monospace'],
+        heading: ['Space Grotesk', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

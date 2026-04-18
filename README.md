@@ -1,104 +1,63 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# 🌊 EcoSim — Live Ecosystem Collapse Simulator
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+An interactive real-time simulation of a marine food web built on **Lotka-Volterra population dynamics**. Drag climate sliders, watch species cascade to extinction, and see the chain reactions ripple through the ecosystem.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## What It Does
 
-## Features
+- **Manipulate Climate Variables** — CO₂ concentration (280–900 ppm), temperature rise (0–5°C), and rainfall (0.2–2.0×)
+- **Watch Food Webs Collapse** — 6 interconnected marine species driven by real-world ODE math
+- **Extinction Cascade Alerts** — Species hitting zero triggers cascades up and down the trophic chain
+- **Live Population Chart** — Real-time Lotka-Volterra line chart updating at 10 fps
+- **3D Ecosystem View** — WebGL glowing orbs representing each species, sized by population
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## The Math
 
-## Demo
+Generalized Lotka-Volterra system:
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+```
+dNᵢ/dt = Nᵢ · (rᵢ(climate) + Σⱼ αᵢⱼ · Nⱼ)
+```
 
-## Deploy to Vercel
+Where `rᵢ(climate)` is the climate-modified intrinsic growth rate, and `αᵢⱼ` encodes the interaction matrix (predation, competition, mutualism).
 
-Vercel deployment will guide you through creating a Supabase account and project.
+### Climate Effects
+| Variable | Phytoplankton | Zooplankton | Fish | Seabird | Coral |
+|----------|:---:|:---:|:---:|:---:|:---:|
+| CO₂ ↑   | hump-shaped bloom | shell dissolution ↓↓ | mild ↓ | — | **bleaching ↓↓↓** |
+| Temp ↑  | mild ↓ | metabolic stress ↓ | habitat loss ↓↓ | fish scarcity ↓↓ | **thermal bleach ↓↓↓** |
+| Rain ↑  | nutrient bloom ↑ | mild ↑ | hypoxia ↓ | nesting disruption ↓ | turbidity ↓ |
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## Species
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+| # | Species | Trophic Level | Role |
+|---|---------|:---:|---|
+| 🌿 | Phytoplankton | 1 | Primary producer |
+| 🦐 | Zooplankton | 2 | Herbivore |
+| 🐟 | Forage Fish | 3 | Mid-chain omnivore |
+| 🐠 | Apex Fish | 4 | Predator |
+| 🦅 | Seabird | 5 | Apex aerial predator |
+| 🪸 | Coral Reef | 0 | Habitat engineer |
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+## Tech Stack
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+- **Next.js 15** + React 19
+- **Three.js / @react-three/fiber** — 3D WebGL ecosystem canvas
+- **Pure SVG** — Real-time population dynamics chart
+- **Euler ODE Integration** — dt=0.02, 5 micro-steps per 100ms frame
+- **Vanilla CSS** — Ocean-dark glassmorphism design system
 
-## Clone and run locally
+## Running Locally
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+```bash
+npm install
+npm run dev
+```
 
-2. Create a Next.js app using the Supabase Starter template npx command
+Open [http://localhost:3000](http://localhost:3000)
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+## Interesting Scenarios to Try
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
-
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
-
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://app.supabase.com/project/_/settings/api)
-
-5. You can now run the Next.js local development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+1. **Coral Collapse** — Push CO₂ to 900 ppm and watch coral bleach → fish habitat shrinks → apex chain collapses
+2. **Temperature Shock** — Set temp to +5°C → seabirds collapse first, then tuna, then cascades down
+3. **Algal Bloom Crash** — Push rainfall to 2.0×, watch phytoplankton overshoot then crash, taking everything with it
+4. **Recovery** — After collapse, lower all sliders back to baseline and watch which species recover and which stay extinct
